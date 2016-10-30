@@ -124,14 +124,12 @@ def setup_config(hardware):
                 hal.Pin('%s.stepgen.04.steppin' % card).set(917)
                 hal.Pin('%s.stepgen.04.dirpin' % card).set(918)
                 for i in range(0, 4):
-                        hal.Pin('%s.stepgen.0%s.position-scale' % (card, i)).set(4000)      
+                        hal.Pin('%s.stepgen.0%s.position-scale' % (card, i)).set(50.92958)      
                 # Machine power (enable stepper drivers)
                 hal.net('emcmot.00.enable', 'bb_gpio.p9.out-23')
                 # Tie machine power signal to the CRAMPS LED
                 hal.net('emcmot.00.enable', 'bb_gpio.p9.out-25')
-                for i in range(0, 4):
-                        hal.Pin('%s.stepgen.0%s.position-scale' % (card, i)).set(4000)
-
+ 
         if hardware == 'bbb-bebopr++':
                 hal.Pin('%s.stepgen.00.steppin' % card).set(812)
                 hal.Pin('%s.stepgen.00.dirpin' % card).set(811)

@@ -40,13 +40,20 @@ class MiniMachine(object):
 
     def process(self):
         # this loop will run until the hal pin 'go_jerry' is set to False
+        posXa=0
+        posXb=-60
+        posYa=0
+        posYb=30
+        posYc=62.5
+        posZa=8
+        posZb=20
         while self.go_jerry.get() == True:
             if (self.state == 'init'):
                 print(self.state)
                 while self.switch.get() == False:
                     pass
                 # go to next state via transition
-                hal.Pin('jplan_z.0.pos-cmd').set(2)
+                hal.Pin('jplan_z.0.pos-cmd').set(posZa)
                 time.sleep(0.1)
                 while self.jplan_z_active.get() == True:
                     # wait
@@ -69,31 +76,31 @@ class MiniMachine(object):
                 # reset LED to indicate that we're moving
                 hal.Signal('emcmot.00.enable').set(0)
                 # go up a bit
-                hal.Pin('jplan_z.0.pos-cmd').set(4)
+                hal.Pin('jplan_z.0.pos-cmd').set(posZb)
                 time.sleep(0.1)
                 while self.jplan_z_active.get() == True:
                     # wait
                     pass
                 # move is finished, go to y a bit
-                hal.Pin('jplan_y.0.pos-cmd').set(2)
+                hal.Pin('jplan_y.0.pos-cmd').set(posYb)
                 time.sleep(0.1)
                 while self.jplan_y_active.get() == True:
                     # wait
                     pass
                 # move is finished, go to cart x pos (-x)
-                hal.Pin('jplan_x.0.pos-cmd').set(-4)
+                hal.Pin('jplan_x.0.pos-cmd').set(posXb)
                 time.sleep(0.1)
                 while self.jplan_x_active.get() == True:
                     # wait
                     pass
                 # move is finished, go to cart y pos (+y)
-                hal.Pin('jplan_y.0.pos-cmd').set(4)
+                hal.Pin('jplan_y.0.pos-cmd').set(posYc)
                 time.sleep(0.1)
                 while self.jplan_y_active.get() == True:
                     # wait
                     pass
                 # lower z to pick product
-                hal.Pin('jplan_z.0.pos-cmd').set(2)
+                hal.Pin('jplan_z.0.pos-cmd').set(posZa)
                 time.sleep(0.1)
                 while self.jplan_z_active.get() == True:
                     # wait
@@ -115,31 +122,31 @@ class MiniMachine(object):
                 hal.Signal('emcmot.00.enable').set(0)
                 print(self.state)
                 # go up a bit
-                hal.Pin('jplan_z.0.pos-cmd').set(4)
+                hal.Pin('jplan_z.0.pos-cmd').set(posZb)
                 time.sleep(0.1)
                 while self.jplan_z_active.get() == True:
                     # wait
                     pass
                 # move is finished, go to y a bit
-                hal.Pin('jplan_y.0.pos-cmd').set(2)
+                hal.Pin('jplan_y.0.pos-cmd').set(posYb)
                 time.sleep(0.1)
                 while self.jplan_y_active.get() == True:
                     # wait
                     pass
                 # move is finished, go to takeout x pos (x)
-                hal.Pin('jplan_x.0.pos-cmd').set(0)
+                hal.Pin('jplan_x.0.pos-cmd').set(posXa)
                 time.sleep(0.1)
                 while self.jplan_x_active.get() == True:
                     # wait
                     pass
                 # move is finished, go to takout y pos (y)
-                hal.Pin('jplan_y.0.pos-cmd').set(0)
+                hal.Pin('jplan_y.0.pos-cmd').set(posYa)
                 time.sleep(0.1)
                 while self.jplan_y_active.get() == True:
                     # wait
                     pass
                 # lower z to pick product
-                hal.Pin('jplan_z.0.pos-cmd').set(2)
+                hal.Pin('jplan_z.0.pos-cmd').set(posZa)
                 time.sleep(0.1)
                 while self.jplan_z_active.get() == True:
                     # wait
