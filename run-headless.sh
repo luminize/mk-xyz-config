@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python /home/machinekit/mk-xyz-config/run.py -nc --hardware=bbb-cramps
+python /home/machinekit/mk-xyz-config/run.py -nc -t --hardware=bbb-cramps

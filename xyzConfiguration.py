@@ -12,7 +12,6 @@ hardwarelist = {
 	'mesa-5i25-7i76' : ['mesanet 5i25 anything IO FPGA card with 7i76 daughter card','hm2_5i25.0'],
 	'bbb-cramps' : ['BeagleBone Black (PRU) with CRAMPS cape', 'hpg'],
 	'bbb-bebopr++' : ['BeagleBone Black (PRU) with BeBoPr++ cape', 'hpg'],
-	'matilda' : ['Matilda Robot', 'hm2_5i25.0']
 }
 
 def check_hardware(hardwarename):
@@ -148,3 +147,12 @@ def setup_config(hardware):
 
 def start_hal():
         hal.start_threads()
+
+def setup_test_cramps():
+	m0_pos = hal.newsig('m0_pos', hal.HAL_FLOAT)
+	m0_pos.link('siggen.0.sine')
+	m0_pos.link('hpg.stepgen.00.position-cmd')
+	hal.Pin('hpg.stepgen.00.maxaccel').set(10)
+	hal.Pin('hpg.stepgen.00.maxvel').set(10)
+	hal.Pin('hpg.stepgen.00.enable').set(1)
+	hal.Pin('siggen.0.frequency').set(0.5)

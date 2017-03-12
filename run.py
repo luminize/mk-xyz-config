@@ -20,6 +20,7 @@ parser.add_argument('-s', '--halscope', help='Starts the halscope', action='stor
 parser.add_argument('-m', '--halmeter', help='Starts the halmeter', action='store_true')
 parser.add_argument('-d', '--debug', help='Enable debug mode', action='store_true')
 parser.add_argument('-hw', '--hardware', help='Hardware setup', action='store')
+parser.add_argument('-t', '--test', help='Connect test motor to siggen', action='store_true')
 
 args = parser.parse_args()
 
@@ -46,6 +47,10 @@ try:
     configuration.check_hardware(args.hardware)
     configuration.setup_hardware(args.hardware)
     configuration.setup_config(args.hardware)
+    if args.test:
+        # load scope only now - because all sigs are now defined:
+        configuration.setup_test_cramps()
+    
     configuration.start_hal()
     
     launcher.register_exit_handler()  # needs to executed after HAL files
