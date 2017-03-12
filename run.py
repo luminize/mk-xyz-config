@@ -41,9 +41,13 @@ try:
     launcher.check_installation()
     launcher.cleanup_session()
     launcher.start_realtime()
+
+    # setup the configuration
     configuration.check_hardware(args.hardware)
     configuration.setup_hardware(args.hardware)
     configuration.setup_config(args.hardware)
+    configuration.start_hal()
+    
     launcher.register_exit_handler()  # needs to executed after HAL files
 
     if not check_mklaucher():  # start mklauncher if not running to make things easier

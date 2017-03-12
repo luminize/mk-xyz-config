@@ -6,9 +6,6 @@ from machinekit import hal
 from machinekit import rtapi as rt
 from machinekit import config as c
 
-card = None
-hardware = None
-
 hardwarelist = {
 	'none' : ['setup without hardware', 'none'],
 	'mesa-5i20' : ['mesanet 5i20 anything IO FPGA card','hm2_5i20.0'],
@@ -83,14 +80,11 @@ def setup_hardware(hardware):
 			  halname=card)
 
 def setup_config(hardware):
-        # rt.init_RTAPI()
-        card = hardwarelist[hardware][1]
-        print(card)
         # load 1 siggen component to verify workings
         rt.loadrt('siggen')
-
+        card = hardwarelist[hardware][1] 
         # give name to servothread and create thread
-        servothread = "servo_thread"
+        servothread = "st"
         rt.newthread('%s' % servothread, 1000000, fp=True)
 
         if (hardware == 'none'):
@@ -151,3 +145,6 @@ def setup_config(hardware):
                         hal.Pin('%s.stepgen.0%s.position-scale' % (card, i)).set(4000)
                 # Machine power (enable stepper drivers)
                 # TODO
+
+def start_hal():
+        hal.start_threads()
