@@ -3,8 +3,7 @@ Description=Starts the Machinekit configuration
 After=syslog.target network.target
 [Service]
 Type=simple
-#ExecStart=/usr/bin/python /home/machinekit/repos/Fabrikator-Mini-CRAMPS/run.py
-#ExecStart=/bin/bash /home/machinekit/mk-xyz-config/run-headless.sh
+ExecStart=/bin/bash /home/machinekit/mk-xyz-config/run-headless.sh
 User=machinekit
 LimitMEMLOCK=33554432
 [Install]
