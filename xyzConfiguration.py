@@ -6,6 +6,7 @@ from machinekit import hal
 from machinekit import rtapi as rt
 from machinekit import config as c
 
+card = None
 hardware = None
 
 hardwarelist = {
@@ -38,6 +39,7 @@ def check_hardware(hardwarename):
                 print("hal component name: %s") % (hardwarelist[hardware][1])
         
 def setup_hardware(hardware):
+        rt.init_RTAPI()
         card = hardwarelist[hardware][1]
 
         if hardware == 'mesa-5i20':
@@ -81,7 +83,9 @@ def setup_hardware(hardware):
 			  halname=card)
 
 def setup_config(hardware):
-        rt.init_RTAPI()
+        # rt.init_RTAPI()
+        card = hardwarelist[hardware][1]
+        print(card)
         # load 1 siggen component to verify workings
         rt.loadrt('siggen')
 
@@ -91,7 +95,7 @@ def setup_config(hardware):
 
         if (hardware == 'none'):
                 # add functions in between
-                hal.addf('siggen.update' % card, servothread)
+                hal.addf('siggen.0.update', servothread)
                 # and here        
                 pass
 
@@ -99,7 +103,7 @@ def setup_config(hardware):
                 hal.addf('%s.read' % card, servothread)
                 hal.addf('%s.write' % card, servothread)
                 # add functions in between here
-                hal.addf('siggen.update' % card, servothread)
+                hal.addf('siggen.0.update', servothread)
                 # and here
                 hal.addf('%s.pet_watchdog' % card, servothread)
 
@@ -107,7 +111,7 @@ def setup_config(hardware):
                 hal.addf('%s.capture-position' % card, servothread)
                 hal.addf('bb_gpio.read', servothread)
                 # add functions in between
-                hal.addf('siggen.update' % card, servothread)
+                hal.addf('siggen.0.update',  servothread)
                 # and here
                 hal.addf('%s.update' % card, servothread)
                 hal.addf('bb_gpio.write', servothread)
