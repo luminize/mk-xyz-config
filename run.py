@@ -48,9 +48,8 @@ try:
     configuration.setup_hardware(args.hardware)
     configuration.setup_config(args.hardware)
     if args.test:
-        # load scope only now - because all sigs are now defined:
+        # setup motor stepgen with siggen:
         configuration.setup_test_cramps()
-    
     configuration.start_hal()
     
     launcher.register_exit_handler()  # needs to executed after HAL files
