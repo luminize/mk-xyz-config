@@ -56,7 +56,7 @@ class MiniMachine(object):
         # to the cart location
         if (self.state == 'at takeout'):
             print(self.state)
-            while self.switch.get() == True:
+            while self.switch.get() == False:
                 pass
             self.go_cart()
 
