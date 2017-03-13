@@ -150,7 +150,7 @@ def setup_config(hardware):
 
         # do some more setup of inputs
         setup_inputs()
-        setup_signals()
+        setup_signals(hardware, card)
 
 def start_hal():
         hal.start_threads()
@@ -182,9 +182,34 @@ def setup_planners(servothread=None):
         hal.addf('jplan_x.update', servothread)
         hal.addf('jplan_y.update', servothread)
         hal.addf('jplan_z.update', servothread)
+	
 
 def setup_inputs():
-        hal.newsig('input_switch', hal.HAL_BIT)
+	pass
 
-def setup_signals():
-        pass
+def setup_signals(hardware=None, card=None):
+	# link input switch
+	s_input_switch = hal.newsig('input_switch', hal.HAL_BIT)
+	# link stepgens to jplan outputs
+	s_xpos = hal.newsig('xpos', hal.HAL_FLOAT)
+	s_ypos = hal.newsig('ypos', hal.HAL_FLOAT)
+	s_zpos = hal.newsig('zpos', hal.HAL_FLOAT)
+	s_xpos.link('jplan_x.0.curr-pos')
+	s_ypos.link('jplan_y.0.curr-pos')
+	s_zpos.link('jplan_z.0.curr-pos')
+        if hardware == 'bbb-cramps':
+		s_xpos.link('%s.stepgen.00.position-cmd' % card)
+		s_ypos.link('%s.stepgen.01.position-cmd' % card)
+		s_zpos.link('%s.stepgen.02.position-cmd' % card)
+		hal.Pin('%s.stepgen.00.maxaccel' % card).set(10)
+		hal.Pin('%s.stepgen.00.maxvel' % card).set(10)
+		hal.Pin('%s.stepgen.00.enable' % card).set(1)
+		hal.Pin('%s.stepgen.01.maxaccel' % card).set(10)
+		hal.Pin('%s.stepgen.01.maxvel' % card).set(10)
+		hal.Pin('%s.stepgen.01.enable' % card).set(1)
+		hal.Pin('%s.stepgen.02.maxaccel' % card).set(10)
+		hal.Pin('%s.stepgen.02.maxvel' % card).set(10)
+		hal.Pin('%s.stepgen.02.enable' % card).set(1)
+		s_input_switch.link('bb_gpio.p8.in-07')
+
+		
