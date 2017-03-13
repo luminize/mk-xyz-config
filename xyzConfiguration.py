@@ -89,6 +89,7 @@ def setup_config(hardware):
         if (hardware == 'none'):
                 # add functions in between
                 hal.addf('siggen.0.update', servothread)
+                setup_planners(servothread)
                 # and here        
                 pass
 
@@ -97,6 +98,7 @@ def setup_config(hardware):
                 hal.addf('%s.write' % card, servothread)
                 # add functions in between here
                 hal.addf('siggen.0.update', servothread)
+                setup_planners(servothread)
                 # and here
                 hal.addf('%s.pet_watchdog' % card, servothread)
 
@@ -105,6 +107,7 @@ def setup_config(hardware):
                 hal.addf('bb_gpio.read', servothread)
                 # add functions in between
                 hal.addf('siggen.0.update',  servothread)
+                setup_planners(servothread)
                 # and here
                 hal.addf('%s.update' % card, servothread)
                 hal.addf('bb_gpio.write', servothread)
@@ -145,6 +148,10 @@ def setup_config(hardware):
                 # Machine power (enable stepper drivers)
                 # TODO
 
+        # do some more setup of inputs
+        setup_inputs()
+        setup_signals()
+
 def start_hal():
         hal.start_threads()
 
@@ -156,3 +163,28 @@ def setup_test_cramps():
 	hal.Pin('hpg.stepgen.00.maxvel').set(10)
 	hal.Pin('hpg.stepgen.00.enable').set(1)
 	hal.Pin('siggen.0.frequency').set(0.5)
+
+def setup_planners(servothread=None):
+        #rt.loadrt('jplan')
+        rt.loadrt('pbmsgs')
+        rt.newinst('jplan', 'jplan_x')
+        rt.newinst('jplan', 'jplan_y')
+        rt.newinst('jplan', 'jplan_z')
+        hal.Pin('jplan_x.0.enable').set(1)
+        hal.Pin('jplan_y.0.enable').set(1)
+        hal.Pin('jplan_z.0.enable').set(1)
+        hal.Pin('jplan_x.0.max-vel').set(10)
+        hal.Pin('jplan_y.0.max-vel').set(10)
+        hal.Pin('jplan_z.0.max-vel').set(10)
+        hal.Pin('jplan_x.0.max-acc').set(10)
+        hal.Pin('jplan_y.0.max-acc').set(10)
+        hal.Pin('jplan_z.0.max-acc').set(10)
+        hal.addf('jplan_x.update', servothread)
+        hal.addf('jplan_y.update', servothread)
+        hal.addf('jplan_z.update', servothread)
+
+def setup_inputs():
+        hal.newsig('input_switch', hal.HAL_BIT)
+
+def setup_signals():
+        pass
