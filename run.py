@@ -6,9 +6,14 @@ import subprocess
 import argparse
 import time
 import xyzConfiguration as configuration
+from machineclass import MiniMachine
 from machinekit import launcher
 from machinekit import rtapi
 from machinekit import config
+from threading import Thread
+
+def tickle_machine(machine):
+    machine.process()
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -51,7 +56,12 @@ try:
         # setup motor stepgen with siggen:
         configuration.setup_test_cramps()
     configuration.start_hal()
-    
+    # instantiate machine
+    m=MiniMachine(name='m')
+    # start a new stread for the machine
+    thread = Thread(target = tickle_machine, args = (m, ))
+    thread.start()
+
     launcher.register_exit_handler()  # needs to executed after HAL files
 
     if not check_mklaucher():  # start mklauncher if not running to make things easier
@@ -65,6 +75,9 @@ try:
         launcher.start_process('halscope')
     if args.halmeter:
         launcher.start_process('halmeter')
+
+
+
 
     while True:
         launcher.check_processes()

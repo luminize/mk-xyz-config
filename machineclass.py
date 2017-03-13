@@ -24,6 +24,7 @@ class MiniMachine(object):
         self.rt = rt
         #self.rt.init_RTAPI()
         self.switch = hal.Signal('input_switch')
+        self.go_jerry = hal.Signal('go_jerry')
         self.jplan_x_active = hal.Pin('jplan_x.0.active')
         self.jplan_y_active = hal.Pin('jplan_y.0.active')
         self.jplan_z_active = hal.Pin('jplan_z.0.active')
@@ -38,103 +39,104 @@ class MiniMachine(object):
 
 
     def process(self):
-        # switch must be in "takout" position to get out of init state
-        if (self.state == 'init'):
-            print(self.state)
-            while self.switch.get() == False:
-                pass
-            # go to next state via transition
-            hal.Pin('jplan_z.0.pos-cmd').set(2)
-            time.sleep(0.1)
-            while self.jplan_z_active.get() == True:
-                # wait
-                pass
-            # move is finished
-            self.start()
+        # this loop will run until the hal pin 'go_jerry' is set to False
+        while self.go_jerry.get() == True:
+            if (self.state == 'init'):
+                print(self.state)
+                while self.switch.get() == False:
+                    pass
+                # go to next state via transition
+                hal.Pin('jplan_z.0.pos-cmd').set(2)
+                time.sleep(0.1)
+                while self.jplan_z_active.get() == True:
+                    # wait
+                    pass
+                # move is finished
+                self.start()
 
-        # when switch gets set to "cart" the machine will start to move
-        # to the cart location
-        if (self.state == 'at takeout'):
-            print(self.state)
-            while self.switch.get() == False:
-                pass
-            self.go_cart()
+                # when switch gets set to "cart" the machine will start to move
+                # to the cart location
+            if (self.state == 'at takeout'):
+                print(self.state)
+                while self.switch.get() == False:
+                    pass
+                self.go_cart()
 
-        if (self.state == 'move to cart'):
-            print(self.state)
-            # go up a bit
-            hal.Pin('jplan_z.0.pos-cmd').set(4)
-            time.sleep(0.1)
-            while self.jplan_z_active.get() == True:
-                # wait
-                pass
-            # move is finished, go to y a bit
-            hal.Pin('jplan_y.0.pos-cmd').set(2)
-            time.sleep(0.1)
-            while self.jplan_y_active.get() == True:
-                # wait
-                pass
-            # move is finished, go to cart x pos (-x)
-            hal.Pin('jplan_x.0.pos-cmd').set(-4)
-            time.sleep(0.1)
-            while self.jplan_x_active.get() == True:
-                # wait
-                pass
-            # move is finished, go to cart y pos (+y)
-            hal.Pin('jplan_y.0.pos-cmd').set(4)
-            time.sleep(0.1)
-            while self.jplan_y_active.get() == True:
-                # wait
-                pass
-            # lower z to pick product
-            hal.Pin('jplan_z.0.pos-cmd').set(2)
-            time.sleep(0.1)
-            while self.jplan_z_active.get() == True:
-                # wait
-                pass
-            self.finish_move_cart()
+            if (self.state == 'move to cart'):
+                print(self.state)
+                # go up a bit
+                hal.Pin('jplan_z.0.pos-cmd').set(4)
+                time.sleep(0.1)
+                while self.jplan_z_active.get() == True:
+                    # wait
+                    pass
+                # move is finished, go to y a bit
+                hal.Pin('jplan_y.0.pos-cmd').set(2)
+                time.sleep(0.1)
+                while self.jplan_y_active.get() == True:
+                    # wait
+                    pass
+                # move is finished, go to cart x pos (-x)
+                hal.Pin('jplan_x.0.pos-cmd').set(-4)
+                time.sleep(0.1)
+                while self.jplan_x_active.get() == True:
+                    # wait
+                    pass
+                # move is finished, go to cart y pos (+y)
+                hal.Pin('jplan_y.0.pos-cmd').set(4)
+                time.sleep(0.1)
+                while self.jplan_y_active.get() == True:
+                    # wait
+                    pass
+                # lower z to pick product
+                hal.Pin('jplan_z.0.pos-cmd').set(2)
+                time.sleep(0.1)
+                while self.jplan_z_active.get() == True:
+                    # wait
+                    pass
+                self.finish_move_cart()
 
-        # when switch gets set to "takeout" again the machine will start to move
-        # to the takeout location
-        if (self.state == 'at cart'):
-            print(self.state)
-            while self.switch.get() == False:
-                pass
-            self.go_takeout()
+                # when switch gets set to "takeout" again the machine will start to move
+                # to the takeout location
+            if (self.state == 'at cart'):
+                print(self.state)
+                while self.switch.get() == False:
+                    pass
+                self.go_takeout()
 
-        if (self.state == 'move to takeout'):
-            print(self.state)
-            # go up a bit
-            hal.Pin('jplan_z.0.pos-cmd').set(4)
-            time.sleep(0.1)
-            while self.jplan_z_active.get() == True:
-                # wait
-                pass
-            # move is finished, go to y a bit
-            hal.Pin('jplan_y.0.pos-cmd').set(2)
-            time.sleep(0.1)
-            while self.jplan_y_active.get() == True:
-                # wait
-                pass
-            # move is finished, go to takeout x pos (x)
-            hal.Pin('jplan_x.0.pos-cmd').set(0)
-            time.sleep(0.1)
-            while self.jplan_x_active.get() == True:
-                # wait
-                pass
-            # move is finished, go to takout y pos (y)
-            hal.Pin('jplan_y.0.pos-cmd').set(0)
-            time.sleep(0.1)
-            while self.jplan_y_active.get() == True:
-                # wait
-                pass
-            # lower z to pick product
-            hal.Pin('jplan_z.0.pos-cmd').set(2)
-            time.sleep(0.1)
-            while self.jplan_z_active.get() == True:
-                # wait
-                pass
-            self.finish_move_takeout()
+            if (self.state == 'move to takeout'):
+                print(self.state)
+                # go up a bit
+                hal.Pin('jplan_z.0.pos-cmd').set(4)
+                time.sleep(0.1)
+                while self.jplan_z_active.get() == True:
+                    # wait
+                    pass
+                # move is finished, go to y a bit
+                hal.Pin('jplan_y.0.pos-cmd').set(2)
+                time.sleep(0.1)
+                while self.jplan_y_active.get() == True:
+                    # wait
+                    pass
+                # move is finished, go to takeout x pos (x)
+                hal.Pin('jplan_x.0.pos-cmd').set(0)
+                time.sleep(0.1)
+                while self.jplan_x_active.get() == True:
+                    # wait
+                    pass
+                # move is finished, go to takout y pos (y)
+                hal.Pin('jplan_y.0.pos-cmd').set(0)
+                time.sleep(0.1)
+                while self.jplan_y_active.get() == True:
+                    # wait
+                    pass
+                # lower z to pick product
+                hal.Pin('jplan_z.0.pos-cmd').set(2)
+                time.sleep(0.1)
+                while self.jplan_z_active.get() == True:
+                    # wait
+                    pass
+                self.finish_move_takeout()
 
 
 

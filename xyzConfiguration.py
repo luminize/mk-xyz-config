@@ -190,6 +190,8 @@ def setup_inputs():
 def setup_signals(hardware=None, card=None):
 	# link input switch
 	s_input_switch = hal.newsig('input_switch', hal.HAL_BIT)
+	s_go_jerry = hal.newsig('go_jerry', hal.HAL_BIT)
+	s_go_jerry.set(1)
 	# link stepgens to jplan outputs
 	s_xpos = hal.newsig('xpos', hal.HAL_FLOAT)
 	s_ypos = hal.newsig('ypos', hal.HAL_FLOAT)
