@@ -57,6 +57,8 @@ class MiniMachine(object):
                 # when switch gets set to "cart" the machine will start to move
                 # to the cart location
             if (self.state == 'at takeout'):
+                # set LED to indicate ready to move
+                hal.Signal('emcmot.00.enable').set(1)
                 print(self.state)
                 while self.switch.get() == False:
                     pass
@@ -64,6 +66,8 @@ class MiniMachine(object):
 
             if (self.state == 'move to cart'):
                 print(self.state)
+                # reset LED to indicate that we're moving
+                hal.Signal('emcmot.00.enable').set(0)
                 # go up a bit
                 hal.Pin('jplan_z.0.pos-cmd').set(4)
                 time.sleep(0.1)
@@ -100,11 +104,15 @@ class MiniMachine(object):
                 # to the takeout location
             if (self.state == 'at cart'):
                 print(self.state)
+                # set LED to indicate ready to move
+                hal.Signal('emcmot.00.enable').set(1)
                 while self.switch.get() == False:
                     pass
                 self.go_takeout()
 
             if (self.state == 'move to takeout'):
+                # reset LED to indicate we're moving
+                hal.Signal('emcmot.00.enable').set(0)
                 print(self.state)
                 # go up a bit
                 hal.Pin('jplan_z.0.pos-cmd').set(4)

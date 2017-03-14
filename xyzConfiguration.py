@@ -185,7 +185,8 @@ def setup_planners(servothread=None):
 	
 
 def setup_inputs():
-	pass
+	#set led to indicate system ready
+	hal.Signal('emcmot.00.enable').set(1)
 
 def setup_signals(hardware=None, card=None):
 	# link input switch
