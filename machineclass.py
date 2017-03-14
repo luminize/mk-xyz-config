@@ -41,12 +41,12 @@ class MiniMachine(object):
     def process(self):
         # this loop will run until the hal pin 'go_jerry' is set to False
         posXa=0
-        posXb=-60
+        posXb=-50
         posYa=0
         posYb=30
-        posYc=62.5
-        posZa=8
-        posZb=20
+        posYc=62
+        posZa=13
+        posZb=33
         while self.go_jerry.get() == True:
             if (self.state == 'init'):
                 print(self.state)
