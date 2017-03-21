@@ -6,6 +6,7 @@ from machinekit import hal
 from machinekit import rtapi as rt
 from machinekit import config as c
 
+
 hardwarelist = {
 	'none' : ['setup without hardware', 'none'],
 	'mesa-5i20' : ['mesanet 5i20 anything IO FPGA card','hm2_5i20.0'],
@@ -108,6 +109,7 @@ def setup_config(hardware):
                 # add functions in between
                 hal.addf('siggen.0.update',  servothread)
                 setup_planners(servothread)
+		setup_stepper_pid(servothread)
                 # and here
                 hal.addf('%s.update' % card, servothread)
                 hal.addf('bb_gpio.write', servothread)
@@ -162,8 +164,13 @@ def setup_test_cramps():
 	hal.Pin('hpg.stepgen.00.enable').set(1)
 	hal.Pin('siggen.0.frequency').set(0.5)
 
+def setup_stepper_pid(servothread):
+	for i in range (0, 3):
+		pid = 'pid.stepgen-%i' % i
+		pidComp = rt.newinst('pid', pid)
+		hal.addf('%s.do-pid-calcs' % pidComp.name, servothread)
+
 def setup_planners(servothread=None):
-        #rt.loadrt('jplan')
         rt.loadrt('pbmsgs')
         rt.newinst('jplan', 'jplan_x')
         rt.newinst('jplan', 'jplan_y')
@@ -171,12 +178,6 @@ def setup_planners(servothread=None):
         hal.Pin('jplan_x.0.enable').set(1)
         hal.Pin('jplan_y.0.enable').set(1)
         hal.Pin('jplan_z.0.enable').set(1)
-        hal.Pin('jplan_x.0.max-vel').set(10)
-        hal.Pin('jplan_y.0.max-vel').set(10)
-        hal.Pin('jplan_z.0.max-vel').set(10)
-        hal.Pin('jplan_x.0.max-acc').set(10)
-        hal.Pin('jplan_y.0.max-acc').set(10)
-        hal.Pin('jplan_z.0.max-acc').set(10)
         hal.addf('jplan_x.update', servothread)
         hal.addf('jplan_y.update', servothread)
         hal.addf('jplan_z.update', servothread)
@@ -187,8 +188,22 @@ def setup_inputs():
 	hal.Signal('emcmot.00.enable').set(1)
 
 def setup_signals(hardware=None, card=None):
+	# set signals
+	speed = 'joint_speed'
+	accel = 'joint_accel'
+	s_speed = hal.newsig('joint_speed', hal.HAL_FLOAT)
+	s_accel = hal.newsig('joint_accel', hal.HAL_FLOAT)
+	s_speed.link('jplan_x.0.max-vel')
+	s_accel.link('jplan_x.0.max-acc')
+	s_speed.link('jplan_y.0.max-vel')
+	s_accel.link('jplan_y.0.max-acc')
+	s_speed.link('jplan_z.0.max-vel')
+	s_accel.link('jplan_z.0.max-acc')
+	hal.Signal(speed).set(800)
+	hal.Signal(accel).set(1500)
 	# link input switch
-	s_input_switch = hal.newsig('input_switch', hal.HAL_BIT)
+	s_input_switch_takeout = hal.newsig('input_switch_takeout', hal.HAL_BIT)
+	s_input_switch_cart = hal.newsig('input_switch_cart', hal.HAL_BIT)
 	s_go_jerry = hal.newsig('go_jerry', hal.HAL_BIT)
 	s_go_jerry.set(1)
 	# link stepgens to jplan outputs
@@ -199,18 +214,42 @@ def setup_signals(hardware=None, card=None):
 	s_ypos.link('jplan_y.0.curr-pos')
 	s_zpos.link('jplan_z.0.curr-pos')
         if hardware == 'bbb-cramps':
-		s_xpos.link('%s.stepgen.00.position-cmd' % card)
-		s_ypos.link('%s.stepgen.01.position-cmd' % card)
-		s_zpos.link('%s.stepgen.02.position-cmd' % card)
-		hal.Pin('%s.stepgen.00.maxaccel' % card).set(10)
-		hal.Pin('%s.stepgen.00.maxvel' % card).set(10)
-		hal.Pin('%s.stepgen.00.enable' % card).set(1)
-		hal.Pin('%s.stepgen.01.maxaccel' % card).set(10)
-		hal.Pin('%s.stepgen.01.maxvel' % card).set(10)
-		hal.Pin('%s.stepgen.01.enable' % card).set(1)
-		hal.Pin('%s.stepgen.02.maxaccel' % card).set(10)
-		hal.Pin('%s.stepgen.02.maxvel' % card).set(10)
-		hal.Pin('%s.stepgen.02.enable' % card).set(1)
-		s_input_switch.link('bb_gpio.p8.in-07')
+		s_xpos.link('pid.stepgen-0.command')
+		s_ypos.link('pid.stepgen-1.command')
+		s_zpos.link('pid.stepgen-2.command')
+		s_speed = hal.Signal('joint_speed')
+		s_accel = hal.Signal('joint_accel')
+		for i in range (0, 3):
+			s_speed.link('%s.stepgen.0%i.maxvel' % (card, i))
+			s_accel.link('%s.stepgen.0%i.maxaccel' % (card, i))
+			hal.Pin('%s.stepgen.0%i.enable' % (card, i)).set(True)
+			hal.Pin('%s.stepgen.0%i.control-type' % (card, i)).set(True)
+			hal.Pin('pid.stepgen-%i.Pgain' % i).set(90)
+			hal.Pin('pid.stepgen-%i.Igain' % i).set(0)
+			hal.Pin('pid.stepgen-%i.Dgain' % i).set(0)
+			hal.Pin('pid.stepgen-%i.bias' % i).set(0)
+			hal.Pin('pid.stepgen-%i.FF0' % i).set(0)
+			hal.Pin('pid.stepgen-%i.FF1' % i).set(1)
+			hal.Pin('pid.stepgen-%i.FF2' % i).set(0.00005)
+			hal.Pin('pid.stepgen-%i.deadband' % i).set(0)
+			hal.Pin('pid.stepgen-%i.maxoutput' % i).set(0)
+			hal.Pin('pid.stepgen-%i.maxerror' % i).set(0.0005)
+			hal.Pin('pid.stepgen-%i.error-previous-target' % i).set(True)
+			hal.Pin('pid.stepgen-%i.enable' % i).set(1)
+			# PID signals
+			# PID output to Stepgen velocity command
+			posCmd = hal.newsig('motor-%i-vel-cmd' % i, hal.HAL_FLOAT)
+			posCmd.link('pid.stepgen-%i.output' % i)
+			posCmd.link('%s.stepgen.0%s.velocity-cmd' % (card, i))
+			# Stepgen position feedback to PID feedback
+			posFb = hal.newsig('motor-%i-pos-fb' % i, hal.HAL_FLOAT)
+			posFb.link('pid.stepgen-%i.feedback' % i)
+			posFb.link('%s.stepgen.0%s.position-fb' % (card, i))
+
+		s_input_switch_takeout.link('bb_gpio.p8.in-07')
+		s_input_switch_cart.link('bb_gpio.p8.in-08')
+
+
+
 
 		

@@ -23,7 +23,8 @@ class MiniMachine(object):
                                initial='init')
         self.rt = rt
         #self.rt.init_RTAPI()
-        self.switch = hal.Signal('input_switch')
+        self.switch_takeout = hal.Signal('input_switch_takeout')
+        self.switch_cart = hal.Signal('input_switch_cart')
         self.go_jerry = hal.Signal('go_jerry')
         self.jplan_x_active = hal.Pin('jplan_x.0.active')
         self.jplan_y_active = hal.Pin('jplan_y.0.active')
@@ -50,7 +51,7 @@ class MiniMachine(object):
         while self.go_jerry.get() == True:
             if (self.state == 'init'):
                 print(self.state)
-                while self.switch.get() == False:
+                while self.switch_takeout.get() == False:
                     pass
                 # go to next state via transition
                 hal.Pin('jplan_z.0.pos-cmd').set(posZa)
@@ -66,8 +67,12 @@ class MiniMachine(object):
             if (self.state == 'at takeout'):
                 # set LED to indicate ready to move
                 hal.Signal('emcmot.00.enable').set(1)
+                time.sleep(0.1)
                 print(self.state)
-                while self.switch.get() == False:
+                # wait for led to be on
+                while hal.Signal('emcmot.00.enable').get() == 0:
+                    pass
+                while self.switch_takeout.get() == True:
                     pass
                 self.go_cart()
 
@@ -113,7 +118,11 @@ class MiniMachine(object):
                 print(self.state)
                 # set LED to indicate ready to move
                 hal.Signal('emcmot.00.enable').set(1)
-                while self.switch.get() == False:
+                time.sleep(0.1)
+                # wait for led to be on
+                while hal.Signal('emcmot.00.enable').get() == 0:
+                    pass
+                while self.switch_takeout.get() == False:
                     pass
                 self.go_takeout()
 
