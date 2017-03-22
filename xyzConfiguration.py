@@ -199,8 +199,8 @@ def setup_signals(hardware=None, card=None):
 	s_accel.link('jplan_y.0.max-acc')
 	s_speed.link('jplan_z.0.max-vel')
 	s_accel.link('jplan_z.0.max-acc')
-	hal.Signal(speed).set(800)
-	hal.Signal(accel).set(1500)
+	hal.Signal(speed).set(700)
+	hal.Signal(accel).set(1200)
 	# link input switch
 	s_input_switch_takeout = hal.newsig('input_switch_takeout', hal.HAL_BIT)
 	s_input_switch_cart = hal.newsig('input_switch_cart', hal.HAL_BIT)
