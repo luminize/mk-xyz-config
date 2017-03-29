@@ -172,7 +172,7 @@ class MiniMachine(object):
                 # move backward to scrape off product on back
                 jointspeed_old = hal.Signal('joint_speed').get()
                 hal.Signal('joint_speed').set(50)
-                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYa').get() + 18)
+                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYa').get() + 20)
                 time.sleep(0.1)
                 while self.jplan_y_active.get() == True:
                     # wait
