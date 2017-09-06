@@ -55,11 +55,11 @@ def setup_hardware(hardware):
 
         if hardware == 'bbb-cramps':
                 print("Loading mesa bbb-cramps")
-                os.system('./setup.cramps.sh')
+                #os.system('./setup.cramps.sh')
                 rt.loadrt('hal_bb_gpio',
 			  output_pins='816,822,823,824,825,826,914,923,925',
 			  input_pins='807,808,809,810,817,911,913')
-                prubin = '%s/%s' % (c.Config().EMC2_RTLIB_DIR, 'xenomai/pru_generic.bin')
+                prubin = '%s/%s' % (c.Config().EMC2_RTLIB_DIR, 'rt-preempt/pru_generic.bin')
                 rt.loadrt('hal_pru_generic',
 			  pru=0, num_stepgens=5,
 			  num_pwmgens=0,
@@ -72,7 +72,7 @@ def setup_hardware(hardware):
                 rt.loadrt('hal_bb_gpio',
 			  output_pins='807,924,926',
 			  input_pins='808,809,810,814,817,818')
-                prubin = '%s/%s' % (c.Config().EMC2_RTLIB_DIR, 'xenomai/pru_generic.bin')
+                prubin = '%s/%s' % (c.Config().EMC2_RTLIB_DIR, 'rt-preempt/pru_generic.bin')
                 rt.loadrt('hal_pru_generic',
 			  pru=0, num_stepgens=5,
 			  num_pwmgens=0,

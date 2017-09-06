@@ -46,6 +46,7 @@ def check_mklaucher():
 try:
     launcher.check_installation()
     launcher.cleanup_session()
+    launcher.load_bbio_file('cramps2_cape.bbio')
     launcher.start_realtime()
 
     # setup the configuration

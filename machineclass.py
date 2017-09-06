@@ -60,8 +60,8 @@ class MiniMachine(object):
         while self.go_jerry.get() == True:
             if (self.state == 'init'):
                 print(self.state)
-                while self.switch_takeout.get() == False:
-                    pass
+                #while self.switch_takeout.get() == False:
+                #    pass
                 # go to next state via transition
                 hal.Pin('jplan_z.0.pos-cmd').set(hal.Signal('posZa').get())
                 time.sleep(0.1)
@@ -81,8 +81,8 @@ class MiniMachine(object):
                 # wait for led to be on
                 while hal.Signal('emcmot.00.enable').get() == 0:
                     pass
-                while self.switch_takeout.get() == True:
-                    pass
+                #while self.switch_takeout.get() == True:
+                #    pass
                 self.go_cart()
 
             if (self.state == 'move to cart'):
@@ -131,8 +131,8 @@ class MiniMachine(object):
                 # wait for led to be on
                 while hal.Signal('emcmot.00.enable').get() == 0:
                     pass
-                while self.switch_takeout.get() == False:
-                    pass
+                #while self.switch_takeout.get() == False:
+                #    pass
                 self.go_takeout()
 
             if (self.state == 'move to takeout'):
