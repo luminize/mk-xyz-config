@@ -168,13 +168,11 @@ class MiniMachine(object):
                             
         
     def process_queue(self):
-        # this loop will run until the hal pin 'go_jerry' is set to False
-        while self.go_jerry.get() == True:
-            print(self.state)
-            self.read_inputs()
-            if (len(self.queue) > 0):
-               q = self.queue.popleft()
-               q()
+        print(self.state)
+        self.read_inputs()
+        if (len(self.queue) > 0):
+            q = self.queue.popleft()
+            q()
             # autostart   
-            if (self.state == 'init'):
-                self.t_start()
+        if (self.state == 'init'):
+            self.t_start()
