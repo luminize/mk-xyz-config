@@ -38,8 +38,6 @@ class MiniMachine(object):
         self.current_segment_index = 0
         self.setup_machine()
         self.rt = rt
-        self.switch_takeout = hal.Signal('input_switch_takeout')
-        self.go_jerry = hal.Signal('go_jerry')
         self.jplan_x_active = hal.Pin('jplan_x.0.active')
         self.jplan_y_active = hal.Pin('jplan_y.0.active')
         self.jplan_z_active = hal.Pin('jplan_z.0.active')
@@ -101,7 +99,6 @@ class MiniMachine(object):
 
         # done calculating, add transition to queue
         self.queue.append(self.t_start_move)
-                                        
 
 
     def determine_longest_coord(self, x, y, z):

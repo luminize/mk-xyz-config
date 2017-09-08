@@ -203,11 +203,6 @@ def setup_signals(hardware=None, card=None):
 	s_accel.link('jplan_z.0.max-acc')
 	hal.Signal(speed).set(700)
 	hal.Signal(accel).set(1200)
-	# link input switch
-	s_input_switch_takeout = hal.newsig('input_switch_takeout', hal.HAL_BIT)
-	s_input_switch_cart = hal.newsig('input_switch_cart', hal.HAL_BIT)
-	s_go_jerry = hal.newsig('go_jerry', hal.HAL_BIT)
-	s_go_jerry.set(1)
 	# link stepgens to jplan outputs
 	s_xpos = hal.newsig('xpos', hal.HAL_FLOAT)
 	s_ypos = hal.newsig('ypos', hal.HAL_FLOAT)
@@ -247,9 +242,6 @@ def setup_signals(hardware=None, card=None):
 			posFb = hal.newsig('motor-%i-pos-fb' % i, hal.HAL_FLOAT)
 			posFb.link('pid.stepgen-%i.feedback' % i)
 			posFb.link('%s.stepgen.0%s.position-fb' % (card, i))
-
-		s_input_switch_takeout.link('bb_gpio.p8.in-07')
-		s_input_switch_cart.link('bb_gpio.p8.in-08')
 
 
 
