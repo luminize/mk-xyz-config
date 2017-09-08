@@ -13,7 +13,7 @@ from machinekit import config
 from threading import Thread
 
 def tickle_machine(machine):
-    machine.process()
+    machine.process_queue()
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -76,9 +76,6 @@ try:
         launcher.start_process('halscope')
     if args.halmeter:
         launcher.start_process('halmeter')
-
-
-
 
     while True:
         launcher.check_processes()

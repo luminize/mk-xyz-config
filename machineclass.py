@@ -1,199 +1,180 @@
 import time
+from collections import deque
 from transitions import Machine
 from machinekit import hal
 from machinekit import rtapi as rt
 
 
-class MiniMachine(object):
-    states = ['init', 'move to cart', 'at cart', 'move to takeout', 'at takeout']
-    transitions = [
-        { 'trigger': 'start', 'source': 'init', 'dest': 'at takeout' },
-        { 'trigger': 'go_cart', 'source': 'at takeout', 'dest': 'move to cart' },
-        { 'trigger': 'finish_move_cart', 'source': 'move to cart', 'dest': 'at cart' },
-        { 'trigger': 'go_takeout',  'source': 'at cart', 'dest': 'move to takeout' },
-        { 'trigger': 'finish_move_takeout', 'source': 'move to takeout', 'dest': 'at takeout'}
-]
+class Segment(object):
 
+    def __init__(self, start, end, velocity):
+        self.startp = start
+        self.endp = end
+        self.vel = velocity
+
+        
+class Point(object):
+
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+        
+
+class MiniMachine(object):
+    states = []
+    transitions = []
     
     def __init__(self,name):
         self.name = name
+        self.queue = deque()
         self.machine = Machine(model=self,
                                states=MiniMachine.states,
                                transitions=MiniMachine.transitions,
-                               initial='init')
+                               initial='init',
+                               ignore_invalid_triggers=True)
+        self.segments = []
+        self.setup_segments()
+        self.current_segment_index = 0
+        self.setup_machine()
         self.rt = rt
-        #self.rt.init_RTAPI()
         self.switch_takeout = hal.Signal('input_switch_takeout')
-        self.switch_cart = hal.Signal('input_switch_cart')
         self.go_jerry = hal.Signal('go_jerry')
         self.jplan_x_active = hal.Pin('jplan_x.0.active')
         self.jplan_y_active = hal.Pin('jplan_y.0.active')
         self.jplan_z_active = hal.Pin('jplan_z.0.active')
 
         
+    def setup_segments(self):
+        self.segments.append(Segment(Point(0,0,0), Point(50,50,50), 0.8))
+        self.segments.append(Segment(Point(50,50,50), Point(150,150,50), 0.8))
+        self.segments.append(Segment(Point(150,150,0), Point(200,0,0), 0.8))
+        self.segments.append(Segment(Point(200,0,0), Point(0,0,0), 0.8))
+        
+        
+    def setup_machine(self):
+        m = self.machine
+        m.add_states(['init', 'calculating', 'moving', 'target_reached', 'set_next_target', 'stopped'])
+        m.add_transition('t_start', ['init', 'stopped', 'set_next_target'], 'calculating')
+        m.add_transition('t_start_move', 'calculating', 'moving')
+        m.add_transition('t_move_complete', 'moving', 'target_reached')
+        m.add_transition('t_next_target', 'target_reached', 'set_next_target')
+        m.add_transition('t_stop', ['target_reached', 'set_next_target', 'calculating'], 'stopped')
+        m.on_enter_calculating(self.calculate_move)
+        m.on_enter_moving(self.wait_for_motion_finished)
+        m.on_enter_set_next_target(self.next_target)
+        m.on_enter_target_reached(self.switch_to_endpoint)
+        m.on_enter_stopped(self.machine_stopped)
+        m.on_exit_stopped(self.machine_started)
+
+        
+    def clear_queue(self):
+        while (len(self.queue) > 0):
+            q = self.queue.popleft()
+
+            
+    def machine_started(self):
+        hal.Signal('s_start').set(0)
+
+        
+    def machine_stopped(self):
+        # reset stop signal
+        self.clear_queue()
+        hal.Signal('s_stop').set(0)
+
+
+    def calculate_move(self):
+        self.current_segment = self.segments[self.current_segment_index]
+        p_begin = self.current_segment.startp
+        p_end = self.current_segment.endp
+
+        # calculate relative distances
+        d_x = p_end.x - p_begin.x
+        d_y = p_end.y - p_begin.y
+        d_z = p_end.z - p_begin.z
+        d_tot = (d_x**2 + d_y**2 + d_z**2)**0.5
+
+        # calculate ratio w.r.t. combined move
+        self.ratio_x = d_x / d_tot
+        self.ratio_y = d_y / d_tot
+        self.ratio_z = d_z / d_tot
+
+        # done calculating, add transition to queue
+        self.queue.append(self.t_start_move)
+                                        
+
+
+    def determine_longest_coord(self, x, y, z):
+        d_x = x
+        d_y = y
+        d_z = z
+
+        # determine dominant coordinate
+        if (d_x**2 > d_y**2):
+            # x is greater than y
+            if (d_x**2 > d_z**2):
+                # x is also greater then Z
+                current_dominant_axis = 'x'
+            else:
+                # Z can be equal to x, in that case have z dominant
+                current_dominant_axis = 'z'
+        else:
+            # y is greater than x
+            if (d_y**2 > d_z**2):
+                # y is also greater than z
+                current_dominant_axis = 'y'
+            else:
+                # Z can be equal to y, in that case have z dominant
+                current_dominant_axis = 'z'
+        return current_dominant_axis
+
+    
+    def next_target(self):
+        # decide if we have reached the end of the list and start from the beginning
+        if (self.current_segment_index == (len(self.segments)-1)):
+            self.current_segment_index = 0
+        else:
+            self.current_segment_index += 1
+        self.queue.append(self.t_start)
+
+        
+    def switch_to_endpoint(self):
+        # set position cmd to x, y and z position of endpoint
+        # set all ratio's to 1
+
+        #add transition to queue
+        self.queue.append(self.t_next_target)
+
+
+    def wait_for_motion_finished(self):
+        # read pins and continue when all motion has ceased
+        # blocking, no callback mechanism used
+        
+        # add transition to queue
+        self.queue.append(self.t_move_complete)
+
+
     def showpins(self):
-        #print(self.switch)
-        print("switch : %s has value %s" % (self.switch, self.switch.get()))
         print("jplan_x: %s has value %s" % (self.jplan_x_active, self.jplan_x_active.get()))
         print("jplan_y: %s has value %s" % (self.jplan_y_active, self.jplan_y_active.get()))
         print("jplan_z: %s has value %s" % (self.jplan_z_active, self.jplan_z_active.get()))
 
 
-    def process(self):
+    def read_inputs(self):
+        if (hal.Signal('s_stop').get() == 1):
+            self.queue.append(self.t_stop)
+        if (hal.Signal('s_start').get() == 1):
+            self.queue.append(self.t_start)
+                            
+        
+    def process_queue(self):
         # this loop will run until the hal pin 'go_jerry' is set to False
-        # create signals for locations
-        hal.newsig('posXa', hal.HAL_FLOAT)
-        hal.Signal('posXa').set(0)
-        hal.newsig('posXb', hal.HAL_FLOAT)
-        hal.Signal('posXb').set(-59)
-        hal.newsig('posYa', hal.HAL_FLOAT)
-        hal.Signal('posYa').set(0)
-        hal.newsig('posYb', hal.HAL_FLOAT)
-        hal.Signal('posYb').set(40)
-        hal.newsig('posYc', hal.HAL_FLOAT)
-        hal.Signal('posYc').set(63.5)
-        hal.newsig('posZa', hal.HAL_FLOAT)
-        hal.Signal('posZa').set(14)
-        hal.newsig('posZb', hal.HAL_FLOAT)
-        hal.Signal('posZb').set(33)
-
         while self.go_jerry.get() == True:
+            print(self.state)
+            self.read_inputs()
+            if (len(self.queue) > 0):
+               q = self.queue.popleft()
+               q()
+            # autostart   
             if (self.state == 'init'):
-                print(self.state)
-                #while self.switch_takeout.get() == False:
-                #    pass
-                # go to next state via transition
-                hal.Pin('jplan_z.0.pos-cmd').set(hal.Signal('posZa').get())
-                time.sleep(0.1)
-                while self.jplan_z_active.get() == True:
-                    # wait
-                    pass
-                # move is finished
-                self.start()
-
-                # when switch gets set to "cart" the machine will start to move
-                # to the cart location
-            if (self.state == 'at takeout'):
-                # set LED to indicate ready to move
-                hal.Signal('emcmot.00.enable').set(1)
-                time.sleep(0.1)
-                print(self.state)
-                # wait for led to be on
-                while hal.Signal('emcmot.00.enable').get() == 0:
-                    pass
-                #while self.switch_takeout.get() == True:
-                #    pass
-                self.go_cart()
-
-            if (self.state == 'move to cart'):
-                print(self.state)
-                # reset LED to indicate that we're moving
-                hal.Signal('emcmot.00.enable').set(0)
-                # go up a bit
-                hal.Pin('jplan_z.0.pos-cmd').set(hal.Signal('posZb').get())
-                time.sleep(0.1)
-                while self.jplan_z_active.get() == True:
-                    # wait
-                    pass
-                # move is finished, go to y a bit
-                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYb').get())
-                time.sleep(0.1)
-                while self.jplan_y_active.get() == True:
-                    # wait
-                    pass
-                # move is finished, go to cart x pos (-x)
-                hal.Pin('jplan_x.0.pos-cmd').set(hal.Signal('posXb').get())
-                time.sleep(0.1)
-                while self.jplan_x_active.get() == True:
-                    # wait
-                    pass
-                # move is finished, go to cart y pos (+y)
-                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYc').get())
-                time.sleep(0.1)
-                while self.jplan_y_active.get() == True:
-                    # wait
-                    pass
-                # lower z to pick product
-                hal.Pin('jplan_z.0.pos-cmd').set(hal.Signal('posZa').get())
-                time.sleep(0.1)
-                while self.jplan_z_active.get() == True:
-                    # wait
-                    pass
-                self.finish_move_cart()
-
-                # when switch gets set to "takeout" again the machine will start to move
-                # to the takeout location
-            if (self.state == 'at cart'):
-                print(self.state)
-                # set LED to indicate ready to move
-                hal.Signal('emcmot.00.enable').set(1)
-                time.sleep(0.1)
-                # wait for led to be on
-                while hal.Signal('emcmot.00.enable').get() == 0:
-                    pass
-                #while self.switch_takeout.get() == False:
-                #    pass
-                self.go_takeout()
-
-            if (self.state == 'move to takeout'):
-                # reset LED to indicate we're moving
-                hal.Signal('emcmot.00.enable').set(0)
-                print(self.state)
-                # go up a bit
-                hal.Pin('jplan_z.0.pos-cmd').set(hal.Signal('posZb').get())
-                time.sleep(0.1)
-                while self.jplan_z_active.get() == True:
-                    # wait
-                    pass
-                # move is finished, go to y a bit
-                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYb').get())
-                time.sleep(0.1)
-                while self.jplan_y_active.get() == True:
-                    # wait
-                    pass
-                # move is finished, go to takeout x pos (x)
-                hal.Pin('jplan_x.0.pos-cmd').set(hal.Signal('posXa').get())
-                time.sleep(0.1)
-                while self.jplan_x_active.get() == True:
-                    # wait
-                    pass
-                # move is finished, go to takout y pos (y)
-                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYa').get())
-                time.sleep(0.1)
-                while self.jplan_y_active.get() == True:
-                    # wait
-                    pass
-                # lower z to release product
-                hal.Pin('jplan_z.0.pos-cmd').set(hal.Signal('posZa').get())
-                time.sleep(0.1)
-                while self.jplan_z_active.get() == True:
-                    # wait
-                    pass
-                # move backward to scrape off product on back
-                jointspeed_old = hal.Signal('joint_speed').get()
-                hal.Signal('joint_speed').set(50)
-                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYa').get() + 20)
-                time.sleep(0.1)
-                while self.jplan_y_active.get() == True:
-                    # wait
-                    pass
-                hal.Signal('joint_speed').set(jointspeed_old)
-                hal.Pin('jplan_z.0.pos-cmd').set(hal.Signal('posZa').get() - 8)
-                time.sleep(0.1)
-                while self.jplan_z_active.get() == True:
-                    # wait
-                    pass
-                hal.Pin('jplan_y.0.pos-cmd').set(hal.Signal('posYa').get())
-                time.sleep(0.1)
-                while self.jplan_y_active.get() == True:
-                    # wait
-                    pass
-
-                self.finish_move_takeout()
-
-
-
-            
-# commands to copy paste in python                
-# from machineclass import MiniMachine
-# m=MiniMachine(name='m')
+                self.t_start()

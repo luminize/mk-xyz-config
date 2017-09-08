@@ -189,6 +189,8 @@ def setup_inputs():
 
 def setup_signals(hardware=None, card=None):
 	# set signals
+        hal.newsig('s_stop', hal.HAL_BIT)
+        hal.newsig('s_start', hal.HAL_BIT)
 	speed = 'joint_speed'
 	accel = 'joint_accel'
 	s_speed = hal.newsig('joint_speed', hal.HAL_FLOAT)
