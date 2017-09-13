@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 from machinekit import hal
 from machinekit import rtapi as rt
 from machinekit import config as c
@@ -78,7 +79,8 @@ def setup_hardware(hardware):
 			  num_pwmgens=0,
 			  prucode=prubin,
 			  halname=card)
-
+        time.sleep(1)
+        
 def setup_config(hardware):
         # load 1 siggen component to verify workings
         rt.loadrt('siggen')
@@ -109,6 +111,7 @@ def setup_config(hardware):
                 # add functions in between
                 hal.addf('siggen.0.update',  servothread)
                 setup_planners(servothread)
+                setup_movement(servothread)
 		setup_stepper_pid(servothread)
                 # and here
                 hal.addf('%s.update' % card, servothread)
@@ -175,13 +178,34 @@ def setup_planners(servothread=None):
         rt.newinst('jplan', 'jplan_x')
         rt.newinst('jplan', 'jplan_y')
         rt.newinst('jplan', 'jplan_z')
-        hal.Pin('jplan_x.0.enable').set(1)
-        hal.Pin('jplan_y.0.enable').set(1)
-        hal.Pin('jplan_z.0.enable').set(1)
         hal.addf('jplan_x.update', servothread)
         hal.addf('jplan_y.update', servothread)
         hal.addf('jplan_z.update', servothread)
 	
+def setup_movement(servothread=None):
+	hal.newsig('s_move_vel', hal.HAL_FLOAT)
+	hal.newsig('s_move_acc', hal.HAL_FLOAT)
+        hal.newsig('s_jplan_enable', hal.HAL_BIT)
+        hal.newsig('s_in_motion', hal.HAL_BIT)
+        rt.newinst('ornv2', 'in_motion', pincount=3)
+        i=0
+        for axis in ['x', 'y', 'z']:
+                hal.newsig('s_ratio_%s' % axis, hal.HAL_FLOAT)
+                hal.newsig('s_motion_%s' % axis, hal.HAL_BIT)
+                for pin in ['acc', 'vel']:
+                        rt.newinst('mult2v2', 'ratio_%s_%s' % (axis, pin))
+                        hal.addf('ratio_%s_%s.funct' % (axis, pin), servothread)
+                        hal.Signal('s_ratio_%s' % axis).link('ratio_%s_%s.in0' % (axis, pin))
+                        hal.Signal('s_move_%s' % pin).link('ratio_%s_%s.in1' % (axis, pin))
+                        hal.newsig('axis_%s_%s' % (axis, pin), hal.HAL_FLOAT)
+                        hal.Signal('axis_%s_%s' % (axis, pin)).link('ratio_%s_%s.out' % (axis, pin))
+                        hal.Signal('axis_%s_%s' % (axis, pin)).link('jplan_%s.0.max-%s' % (axis, pin))
+                hal.Signal('s_jplan_enable').link('jplan_%s.0.enable' % axis)
+                hal.Signal('s_motion_%s' % axis).link('jplan_%s.0.active' % axis)
+                hal.Signal('s_motion_%s' % axis).link('in_motion.in%i' % i)
+                i +=1
+        hal.Signal('s_in_motion').link('in_motion.out')
+        hal.addf('in_motion.funct', servothread)
 
 def setup_inputs():
 	#set led to indicate system ready
@@ -191,18 +215,15 @@ def setup_signals(hardware=None, card=None):
 	# set signals
         hal.newsig('s_stop', hal.HAL_BIT)
         hal.newsig('s_start', hal.HAL_BIT)
-	speed = 'joint_speed'
-	accel = 'joint_accel'
-	s_speed = hal.newsig('joint_speed', hal.HAL_FLOAT)
-	s_accel = hal.newsig('joint_accel', hal.HAL_FLOAT)
-	s_speed.link('jplan_x.0.max-vel')
-	s_accel.link('jplan_x.0.max-acc')
-	s_speed.link('jplan_y.0.max-vel')
-	s_accel.link('jplan_y.0.max-acc')
-	s_speed.link('jplan_z.0.max-vel')
-	s_accel.link('jplan_z.0.max-acc')
-	hal.Signal(speed).set(700)
-	hal.Signal(accel).set(1200)
+        hal.newsig('s_enable', hal.HAL_BIT)
+        s_speed = hal.newsig('s_max_joint_vel', hal.HAL_FLOAT)
+        time.sleep(0.5)
+        s_speed.set(10.0)
+        time.sleep(0.5)
+        s_accel = hal.newsig('s_max_joint_acc', hal.HAL_FLOAT)
+        time.sleep(0.5)
+        s_accel.set(10.0)
+        time.sleep(0.5)
 	# link stepgens to jplan outputs
 	s_xpos = hal.newsig('xpos', hal.HAL_FLOAT)
 	s_ypos = hal.newsig('ypos', hal.HAL_FLOAT)
@@ -214,13 +235,12 @@ def setup_signals(hardware=None, card=None):
 		s_xpos.link('pid.stepgen-0.command')
 		s_ypos.link('pid.stepgen-1.command')
 		s_zpos.link('pid.stepgen-2.command')
-		s_speed = hal.Signal('joint_speed')
-		s_accel = hal.Signal('joint_accel')
 		for i in range (0, 3):
-			s_speed.link('%s.stepgen.0%i.maxvel' % (card, i))
-			s_accel.link('%s.stepgen.0%i.maxaccel' % (card, i))
-			hal.Pin('%s.stepgen.0%i.enable' % (card, i)).set(True)
-			hal.Pin('%s.stepgen.0%i.control-type' % (card, i)).set(True)
+                        hal.Pin('%s.stepgen.0%s.maxvel' % (card, i)).set(100.0)
+			hal.Pin('%s.stepgen.0%s.maxaccel' % (card, i)).set(100.0)
+			
+			hal.Pin('%s.stepgen.0%i.enable' % (card, i)).set(1)
+			hal.Pin('%s.stepgen.0%i.control-type' % (card, i)).set(1)
 			hal.Pin('pid.stepgen-%i.Pgain' % i).set(90)
 			hal.Pin('pid.stepgen-%i.Igain' % i).set(0)
 			hal.Pin('pid.stepgen-%i.Dgain' % i).set(0)
@@ -231,7 +251,7 @@ def setup_signals(hardware=None, card=None):
 			hal.Pin('pid.stepgen-%i.deadband' % i).set(0)
 			hal.Pin('pid.stepgen-%i.maxoutput' % i).set(0)
 			hal.Pin('pid.stepgen-%i.maxerror' % i).set(0.0005)
-			hal.Pin('pid.stepgen-%i.error-previous-target' % i).set(True)
+			hal.Pin('pid.stepgen-%i.error-previous-target' % i).set(1)
 			hal.Pin('pid.stepgen-%i.enable' % i).set(1)
 			# PID signals
 			# PID output to Stepgen velocity command
@@ -242,8 +262,3 @@ def setup_signals(hardware=None, card=None):
 			posFb = hal.newsig('motor-%i-pos-fb' % i, hal.HAL_FLOAT)
 			posFb.link('pid.stepgen-%i.feedback' % i)
 			posFb.link('%s.stepgen.0%s.position-fb' % (card, i))
-
-
-
-
-		

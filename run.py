@@ -62,7 +62,7 @@ def main():
             configuration.setup_test_cramps()
         configuration.start_hal()
         # instantiate machine
-        m=MiniMachine(name='m')
+        m=MiniMachine(name='m', rt=configuration.rt , hal=configuration.hal)
     
         if args.manhole:
             try:
